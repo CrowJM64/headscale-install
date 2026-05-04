@@ -1,0 +1,134 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for headscale-install
+#Head2scale Debian Install. Redhat/Other TBC (Standalone Binaries).
+
+- name: Check for Headscale Deb Install File.
+  stat:
+    path: /root/headscale.deb
+  register: headscale_installer_info
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+
+- name: Download Headscale Deb File.
+  ansible.builtin.get_url:
+    url: https://github.com/juanfont/headscale/releases/download/v{{HEADSCALE_VERSION}}/headscale_{{HEADSCALE_VERSION}}_linux_{{HEADSCALE_SERV_ARCH}}.deb
+    dest: /root/headscale.deb
+    mode: '0500'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+    - not headscale_installer_info.stat.exists
+
+- name: Install Headscale from Deb File.
+  ansible.builtin.apt:
+    deb: "/root/headscale.deb"
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+
+- name: Ensure Headscale Service is stopped and disabled.
+  ansible.builtin.service:
+    name: headscale
+    enabled: no
+    state: stopped
+  register: headscale_stopped
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+
+- name: Check for Headscale Config File.
+  stat:
+    path: /etc/headscale/config.yaml
+  register: headscale_config_info
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+
+- name: Download Headscale Config File if needed.
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/juanfont/headscale/main/config-example.yaml
+    dest: /etc/headscale/config.yaml
+    mode: '0700'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+    - not headscale_config_info.stat.exists
+
+- name: Set server_url.
+  ansible.builtin.lineinfile:
+    path: /etc/headscale/config.yaml
+    regexp: '^server_url'
+    line: 'server_url: {{ HEADSCALE_SERV_URL }}:443'
+    backup: yes
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+  register: server_url_changed
+  
+- name: Set acme_email.
+  ansible.builtin.lineinfile:
+    path: /etc/headscale/config.yaml
+    regexp: '^acme-email'
+    line: 'acme_email: {{ ACME_EMAIL }}:443'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+  register: acme_email_changed
+
+- name: Set base_domain.
+  ansible.builtin.lineinfile:
+    path: /etc/headscale/config.yaml
+    regexp: '^  base_domain'
+    line: '  base_domain: {{ BASE_DOMAIN }}:443'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+  register: base_domain_changed
+
+- name: Set randomize_client_port.
+  ansible.builtin.lineinfile:
+    path: /etc/headscale/config.yaml
+    regexp: '^randomize_client_port'
+    line: 'randomize_client_port: {{ RNDM_CLIENT_PORT }}'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+  register: client_port_changed
+
+- name: Start+Enable Headscale Server with changes.
+  ansible.builtin.service:
+    name: headscale
+    enabled: yes
+    state: restarted
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+    - server_url_changed.changed or acme_email_changed.changed or base_domain_changed.changed or client_port_changed.changed
+  register: headscale_server_started
+
+
+#check if running, if not, revert.
+
+#headscale users create Firstname.Lastname -d 'Firstname Lastname' -e firstname.lastname@email.address`
+
+#headscale preauthkeys create --tags tag:Servers --expiration 4383h --reusable
+
+#alias headscale-list="headscale users list ; headscale nodes list ; headscale preauthkeys list ; headscale apikeys list"
+
+#alias headscale-restart="systemctl restart headscale.service ; sleep 3 ; systemctl status headscale.service"
+
+#sudo nano /etc/headscale/config.yaml
+
+#Ensure Headscale is stoppped and disabled.
+
+#Make Config Changes and start, then test Headscale.
+
+#sudo systemctl enable --now headscale
+
+#Check running
+
+#Create PAK Codes and groups for Servers to join
+
+#chmod -R 600 /etc/headscale

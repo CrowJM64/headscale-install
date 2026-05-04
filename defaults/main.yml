@@ -1,0 +1,16 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for headscale-install
+# Headscale Releases: https://github.com/juanfont/headscale/releases
+HEADSCALE_SERVER: false # Set to true in host var of Headscale Master Server (true/false)
+HEADSCALE_VERSION: '0.28.0' # See above URL for latest releases. e.g. "X.Y.Z"
+HEADSCALE_SERV_ARCH: 'amd64' # Your system architecture, e.g. "amd64"
+HEADSCALE_SERV_URL: 'https://example.com' # Publicly Accessible URL of the Headscale Server. Must be accessible on 80/tcp and 443/tcp if self-signing with LetsEncrypt.
+ACME_EMAIL: '' # Email to register with ACME provider
+BASE_DOMAIN: 'example.com' # This domain MUST be different from the HEADSCALE_SERV_URL/server_url domain. Local between Head/tailscale devices.
+RNDM_CLIENT_PORT: 'false' # Enabling this option makes devices prefer a random port for WireGuard traffic over the default static port 41641 (true/false)
+HEADSCALE_GROUPS:
+  - 'SERVERS'
+#  - 'Workstations' 
+#  - 'Example'
+HEADSCALE_CLIENT: true # Set to true in host or group var of Head/Tailscale Clients, false on Headscale Server (true/false)

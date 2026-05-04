@@ -1,8 +1,7 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for headscale-install
-#Head2scale Debian Install. Redhat/Other TBC (Standalone Binaries).
-
+#Headscale Debian Install. Redhat/Other TBC (Standalone Binaries).
 - name: Check for Headscale Deb Install File.
   stat:
     path: /root/headscale.deb
@@ -24,16 +23,6 @@
 - name: Install Headscale from Deb File.
   ansible.builtin.apt:
     deb: "/root/headscale.deb"
-  when:
-    - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
-
-- name: Ensure Headscale Service is stopped and disabled.
-  ansible.builtin.service:
-    name: headscale
-    enabled: no
-    state: stopped
-  register: headscale_stopped
   when:
     - ansible_os_family == "Debian"
     - HEADSCALE_SERVER == true
@@ -60,22 +49,52 @@
   ansible.builtin.lineinfile:
     path: /etc/headscale/config.yaml
     regexp: '^server_url'
-    line: 'server_url: {{ HEADSCALE_SERV_URL }}:443'
+    line: 'server_url: https://{{ HEADSCALE_SERV_URL }}:443'
     backup: yes
   when:
     - ansible_os_family == "Debian"
     - HEADSCALE_SERVER == true
-  register: server_url_changed
-  
+  register: server_url_set
+
+- name: Set listen_addr.
+  ansible.builtin.lineinfile:
+    path: /etc/headscale/config.yaml
+    regexp: '^listen_addr'
+    line: 'listen_addr: 0.0.0.0:443'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+  register: listen_addr_set
+
 - name: Set acme_email.
   ansible.builtin.lineinfile:
     path: /etc/headscale/config.yaml
-    regexp: '^acme-email'
+    regexp: '^acme_email'
     line: 'acme_email: {{ ACME_EMAIL }}:443'
   when:
     - ansible_os_family == "Debian"
     - HEADSCALE_SERVER == true
-  register: acme_email_changed
+  register: acme_email_set
+
+- name: Set letsencrypt_hostname.
+  ansible.builtin.lineinfile:
+    path: /etc/headscale/config.yaml
+    regexp: '^tls_letsencrypt_hostname:'
+    line: 'tls_letsencrypt_hostname: "{{ HEADSCALE_SERV_URL }}"'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+  register: letencrypt_hostname_set
+
+- name: Set magic_dns.
+  ansible.builtin.lineinfile:
+    path: /etc/headscale/config.yaml
+    regexp: '^magic_dns'
+    line: 'magic_dns: {{ MAGIC_DNS }}'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+  register: magic_dns_set
 
 - name: Set base_domain.
   ansible.builtin.lineinfile:
@@ -85,7 +104,7 @@
   when:
     - ansible_os_family == "Debian"
     - HEADSCALE_SERVER == true
-  register: base_domain_changed
+  register: base_domain_set
 
 - name: Set randomize_client_port.
   ansible.builtin.lineinfile:
@@ -95,9 +114,28 @@
   when:
     - ansible_os_family == "Debian"
     - HEADSCALE_SERVER == true
-  register: client_port_changed
+  register: client_port_set
 
-- name: Start+Enable Headscale Server with changes.
+- name: Reassign /etc/headscale to headscale user.
+  ansible.builtin.file:
+    path: /etc/headscale
+    recurse: yes
+    mode: '500'
+    owner: headscale
+    group: headscale
+
+- name: Check Headscale is running
+  ansible.builtin.systemd:
+    name: "headscale.service"
+  register: headscale_service_status
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+
+- debug:
+    var: headscale_service_status.status.ActiveState
+
+- name: Restart+Enable Headscale Server with changes.
   ansible.builtin.service:
     name: headscale
     enabled: yes
@@ -105,30 +143,32 @@
   when:
     - ansible_os_family == "Debian"
     - HEADSCALE_SERVER == true
-    - server_url_changed.changed or acme_email_changed.changed or base_domain_changed.changed or client_port_changed.changed
+    - headscale_service_status.status.ActiveState == 'inactive' or server_url_set.changed or listen_addr_set.changed or acme_email_set.changed or letencrypt_hostname_set.changed or magic_dns_set.changed or base_domain_set.changed or client_port_set.changed
   register: headscale_server_started
 
+- name: Create PAK for Groups/Tags.
+  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ item }}" --expiration "{{ PAK_EXPIRY }}" --reusable
+  loop: "{{ HEADSCALE_GROUPS }}"
+  register: PAK_TOKEN
 
-#check if running, if not, revert.
+    # Display the captured output
+    - name: Show disk usage
+      debug:
+        var: PAK_TOKEN
+  
+# Tailscale Configuration
 
-#headscale users create Firstname.Lastname -d 'Firstname Lastname' -e firstname.lastname@email.address`
+- name: Download Tailscale Install Script.
+  ansible.builtin.get_url:
+    url: https://tailscale.com/install.sh
+    dest: /root/tailscale.sh
+    mode: '0500'
+  when:
+    - HEADSCALE_SERVER == false
+    - headscale_server_started is succeeded
 
-#headscale preauthkeys create --tags tag:Servers --expiration 4383h --reusable
-
-#alias headscale-list="headscale users list ; headscale nodes list ; headscale preauthkeys list ; headscale apikeys list"
-
-#alias headscale-restart="systemctl restart headscale.service ; sleep 3 ; systemctl status headscale.service"
-
-#sudo nano /etc/headscale/config.yaml
-
-#Ensure Headscale is stoppped and disabled.
-
-#Make Config Changes and start, then test Headscale.
-
-#sudo systemctl enable --now headscale
-
-#Check running
-
-#Create PAK Codes and groups for Servers to join
-
-#chmod -R 600 /etc/headscale
+- name: Install Tailscale.sh
+  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ item }}" --expiration "{{ PAK_EXPIRY }}" --reusable
+  when:
+    - HEADSCALE_SERVER == false
+    - headscale_server_started is succeeded

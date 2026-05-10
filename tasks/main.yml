@@ -12,7 +12,7 @@
 
 - name: Download Headscale Deb File.
   ansible.builtin.get_url:
-    url: https://github.com/juanfont/headscale/releases/download/v{{HEADSCALE_VERSION}}/headscale_{{HEADSCALE_VERSION}}_linux_{{HEADSCALE_SERV_ARCH}}.deb
+    url: https://github.com/juanfont/headscale/releases/download/v{{headscale_version}}/headscale_{{headscale_version}}_linux_{{HEADSCALE_SERV_ARCH}}.deb
     dest: /root/headscale.deb
     mode: '0500'
   when:
@@ -123,6 +123,9 @@
     mode: '500'
     owner: headscale
     group: headscale
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
 
 - name: Check Headscale is running
   ansible.builtin.systemd:
@@ -147,28 +150,91 @@
   register: headscale_server_started
 
 - name: Create PAK for Groups/Tags.
-  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ item }}" --expiration "{{ PAK_EXPIRY }}" --reusable
-  loop: "{{ HEADSCALE_GROUPS }}"
-  register: PAK_TOKEN
+  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ HEADSCALE_GROUP }}" --expiration "{{ PAK_EXPIRY }}" --reusable
+  register: PAK
+  run_once: true
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
 
-    # Display the captured output
-    - name: Show disk usage
-      debug:
-        var: PAK_TOKEN
-  
+- name: Show PAK.stdout
+  ansible.builtin.debug:
+    var: PAK.stdout
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+
+- name: Share key with all hosts
+  ansible.builtin.set_fact:
+    pak_join_key: "{{ hostvars[server_host]['PAK']['stdout'] }}"
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+
+- name: Show PAK Token
+  ansible.builtin.debug:
+    msg: '{{ PAK }}'
+  when:
+    - ansible_os_family == "Debian"
+    - HEADSCALE_SERVER == true
+
+#- name: Create PAK for Groups/Tags.
+#  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ item }}" --expiration "{{ PAK_EXPIRY }}" --reusable
+#  loop: "{{ HEADSCALE_GROUP }}"
+#  register: PAK
+#  when:
+#    - ansible_os_family == "Debian"
+#    - HEADSCALE_SERVER == true
+
+#- name: Show PAK.stdout
+#  ansible.builtin.debug:
+#    msg: "Token for {{ item.item }}: {{ PAK.stdout }}"
+#  when:
+#    - ansible_os_family == "Debian"
+#    - HEADSCALE_SERVER == true
+
+#- name: Get PAK Token
+#  ansible.builtin.debug:
+#    msg: "Token for {{ item.item }}: {{ PAK.stdout }}"
+#  loop: "{{ PAK.results }}"
+#  when:
+#    - ansible_os_family == "Debian"
+#    - HEADSCALE_SERVER == true
+
 # Tailscale Configuration
-
 - name: Download Tailscale Install Script.
   ansible.builtin.get_url:
     url: https://tailscale.com/install.sh
     dest: /root/tailscale.sh
     mode: '0500'
   when:
-    - HEADSCALE_SERVER == false
+    - HEADSCALE_CLIENT == true
     - headscale_server_started is succeeded
 
-- name: Install Tailscale.sh
-  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ item }}" --expiration "{{ PAK_EXPIRY }}" --reusable
+- name: Check if Tailscale is installed
+  ansible.builtin.systemd:
+    name: "tailscale.service"
+  register: tailscale_status
   when:
-    - HEADSCALE_SERVER == false
+    - HEADSCALE_CLIENT == true
+    - headscale_server_started is succeeded
+
+- name: Install Tailscale
+  ansible.builtin.shell: /root/tailscale.sh
+  when:
+    - HEADSCALE_CLIENT == true
+    - headscale_server_started is succeeded
+    - tailscale_status.status.ActiveState != 'active'
+
+#- name: Show TailScale Joining
+#  ansible.builtin.debug:
+#    msg: 'tailscale up --login-server https://{{ HEADSCALE_SERV_URL }} --auth-key {{ PAK_TOKEN }}'
+#  when:
+#    - HEADSCALE_CLIENT == true
+#    - headscale_server_started is succeeded
+
+- name: Join Client to Headscale
+  ansible.builtin.shell: 'tailscale up --login-server https://{{ HEADSCALE_SERV_URL }} --auth-key {{ PAK_TOKEN }}'
+  when:
+    - HEADSCALE_CLIENT == true
     - headscale_server_started is succeeded

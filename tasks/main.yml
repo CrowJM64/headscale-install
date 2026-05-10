@@ -8,16 +8,16 @@
   register: headscale_installer_info
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 - name: Download Headscale Deb File.
   ansible.builtin.get_url:
-    url: https://github.com/juanfont/headscale/releases/download/v{{headscale_version}}/headscale_{{headscale_version}}_linux_{{HEADSCALE_SERV_ARCH}}.deb
+    url: https://github.com/juanfont/headscale/releases/download/v{{headscale_version}}/headscale_{{headscale_version}}_linux_{{headscale_serv_arch}}.deb
     dest: /root/headscale.deb
     mode: '0500'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
     - not headscale_installer_info.stat.exists
 
 - name: Install Headscale from Deb File.
@@ -25,7 +25,7 @@
     deb: "/root/headscale.deb"
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 - name: Check for Headscale Config File.
   stat:
@@ -33,7 +33,7 @@
   register: headscale_config_info
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 - name: Download Headscale Config File if needed.
   ansible.builtin.get_url:
@@ -42,18 +42,18 @@
     mode: '0700'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
     - not headscale_config_info.stat.exists
 
 - name: Set server_url.
   ansible.builtin.lineinfile:
     path: /etc/headscale/config.yaml
     regexp: '^server_url'
-    line: 'server_url: https://{{ HEADSCALE_SERV_URL }}:443'
+    line: 'server_url: https://{{ headscale_serv_url }}:443'
     backup: yes
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
   register: server_url_set
 
 - name: Set listen_addr.
@@ -63,57 +63,57 @@
     line: 'listen_addr: 0.0.0.0:443'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
   register: listen_addr_set
 
 - name: Set acme_email.
   ansible.builtin.lineinfile:
     path: /etc/headscale/config.yaml
     regexp: '^acme_email'
-    line: 'acme_email: {{ ACME_EMAIL }}:443'
+    line: 'acme_email: {{ acme_email }}:443'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
   register: acme_email_set
 
 - name: Set letsencrypt_hostname.
   ansible.builtin.lineinfile:
     path: /etc/headscale/config.yaml
     regexp: '^tls_letsencrypt_hostname:'
-    line: 'tls_letsencrypt_hostname: "{{ HEADSCALE_SERV_URL }}"'
+    line: 'tls_letsencrypt_hostname: "{{ headscale_serv_url }}"'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
   register: letencrypt_hostname_set
 
 - name: Set magic_dns.
   ansible.builtin.lineinfile:
     path: /etc/headscale/config.yaml
     regexp: '^magic_dns'
-    line: 'magic_dns: {{ MAGIC_DNS }}'
+    line: 'magic_dns: {{ magic_dns }}'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
   register: magic_dns_set
 
 - name: Set base_domain.
   ansible.builtin.lineinfile:
     path: /etc/headscale/config.yaml
     regexp: '^  base_domain'
-    line: '  base_domain: {{ BASE_DOMAIN }}:443'
+    line: '  base_domain: {{ base_domain }}:443'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
   register: base_domain_set
 
 - name: Set randomize_client_port.
   ansible.builtin.lineinfile:
     path: /etc/headscale/config.yaml
     regexp: '^randomize_client_port'
-    line: 'randomize_client_port: {{ RNDM_CLIENT_PORT }}'
+    line: 'randomize_client_port: {{ rndm_client_port }}'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
   register: client_port_set
 
 - name: Reassign /etc/headscale to headscale user.
@@ -125,7 +125,7 @@
     group: headscale
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 - name: Check Headscale is running
   ansible.builtin.systemd:
@@ -133,7 +133,7 @@
   register: headscale_service_status
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 - debug:
     var: headscale_service_status.status.ActiveState
@@ -145,53 +145,53 @@
     state: restarted
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
     - headscale_service_status.status.ActiveState == 'inactive' or server_url_set.changed or listen_addr_set.changed or acme_email_set.changed or letencrypt_hostname_set.changed or magic_dns_set.changed or base_domain_set.changed or client_port_set.changed
   register: headscale_server_started
 
 - name: Create PAK for Groups/Tags.
-  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ HEADSCALE_GROUP }}" --expiration "{{ PAK_EXPIRY }}" --reusable
-  register: PAK
+  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ headscale_group }}" --expiration "{{ pak_expiry }}" --reusable
+  register: pak
   run_once: true
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 - name: Show PAK.stdout
   ansible.builtin.debug:
-    var: PAK.stdout
+    var: pak
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 - name: Share key with all hosts
   ansible.builtin.set_fact:
-    pak_join_key: "{{ hostvars[server_host]['PAK']['stdout'] }}"
+    pak.stdout: "{{ hostvars[lighthouse]['pak']['stdout'] }}"
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 - name: Show PAK Token
   ansible.builtin.debug:
     msg: '{{ PAK }}'
   when:
     - ansible_os_family == "Debian"
-    - HEADSCALE_SERVER == true
+    - headscale_server == true
 
 #- name: Create PAK for Groups/Tags.
-#  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ item }}" --expiration "{{ PAK_EXPIRY }}" --reusable
-#  loop: "{{ HEADSCALE_GROUP }}"
+#  ansible.builtin.shell: headscale preauthkeys create --tags tag:"{{ item }}" --expiration "{{ pak_expiry }}" --reusable
+#  loop: "{{ headscale_group }}"
 #  register: PAK
 #  when:
 #    - ansible_os_family == "Debian"
-#    - HEADSCALE_SERVER == true
+#    - headscale_server == true
 
 #- name: Show PAK.stdout
 #  ansible.builtin.debug:
 #    msg: "Token for {{ item.item }}: {{ PAK.stdout }}"
 #  when:
 #    - ansible_os_family == "Debian"
-#    - HEADSCALE_SERVER == true
+#    - headscale_server == true
 
 #- name: Get PAK Token
 #  ansible.builtin.debug:
@@ -199,7 +199,7 @@
 #  loop: "{{ PAK.results }}"
 #  when:
 #    - ansible_os_family == "Debian"
-#    - HEADSCALE_SERVER == true
+#    - headscale_server == true
 
 # Tailscale Configuration
 - name: Download Tailscale Install Script.
@@ -208,7 +208,7 @@
     dest: /root/tailscale.sh
     mode: '0500'
   when:
-    - HEADSCALE_CLIENT == true
+    - headscale_client == true
     - headscale_server_started is succeeded
 
 - name: Check if Tailscale is installed
@@ -216,25 +216,25 @@
     name: "tailscale.service"
   register: tailscale_status
   when:
-    - HEADSCALE_CLIENT == true
+    - headscale_client == true
     - headscale_server_started is succeeded
 
 - name: Install Tailscale
   ansible.builtin.shell: /root/tailscale.sh
   when:
-    - HEADSCALE_CLIENT == true
+    - headscale_client == true
     - headscale_server_started is succeeded
     - tailscale_status.status.ActiveState != 'active'
 
 #- name: Show TailScale Joining
 #  ansible.builtin.debug:
-#    msg: 'tailscale up --login-server https://{{ HEADSCALE_SERV_URL }} --auth-key {{ PAK_TOKEN }}'
+#    msg: 'tailscale up --login-server https://{{ headscale_serv_url }} --auth-key {{ pak_token }}'
 #  when:
-#    - HEADSCALE_CLIENT == true
+#    - headscale_client == true
 #    - headscale_server_started is succeeded
 
 - name: Join Client to Headscale
-  ansible.builtin.shell: 'tailscale up --login-server https://{{ HEADSCALE_SERV_URL }} --auth-key {{ PAK_TOKEN }}'
+  ansible.builtin.shell: 'tailscale up --login-server https://{{ headscale_serv_url }} --auth-key {{ pak_token }}'
   when:
-    - HEADSCALE_CLIENT == true
+    - headscale_client == true
     - headscale_server_started is succeeded

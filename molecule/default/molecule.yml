@@ -1,0 +1,86 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+
+# If you run into issues running molecule test, you may need to increase max inotify instances and watches.
+#echo "fs.inotify.max_user_instances=512" | sudo tee -a /etc/sysctl.conf
+#echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf
+#sudo sysctl -p
+
+driver: {name: containers}
+
+platforms:
+  - name: debian-headscale-server
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest # Must use Fully Qualified name of Image and domain to pull from to be compatible with Podman.
+    pre_build_image: true
+    command: /sbin/init
+    privileged: true # Needed for systemd within containers.
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw # Needed for systemd within containers.
+
+  - name: rocky-headscale-server
+    image: docker.io/geerlingguy/docker-rockylinux10-ansible:latest
+    pre_build_image: true
+    command: /sbin/init
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+ansible:
+  cfg:
+    defaults:
+      host_key_checking: false
+      verbosity: 1
+    ssh_connection:
+      pipelining: true
+  env:
+    ANSIBLE_FORCE_COLOR: "1"
+    ANSIBLE_LOAD_CALLBACK_PLUGINS: "1"
+    ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  executor:
+    backend: ansible-playbook
+    args:
+      ansible_playbook:
+        - --diff
+#        - --force-handlers
+      ansible_navigator:
+        - --mode stdout
+        - --pull-policy missing
+        - --execution-environment-image ghcr.io/ansible/community-ansible-dev-tools:latest
+
+provisioner:
+  name: ansible
+  inventory:
+    hosts:
+      all:
+        headscale_version: '0.29.7'
+        headscale_serv_arch: 'amd64'
+        headscale_group: 'servers'
+
+
+  playbooks:
+    create: create.yml
+    converge: converge.yml
+    destroy: destroy.yml
+    cleanup: cleanup.yml
+    prepare: prepare.yml
+    side_effect: side_effect.yml
+    verify: verify.yml
+
+scenario:
+  name: default
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

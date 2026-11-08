@@ -1,0 +1,19 @@
+---
+# Purpose: assert that the instance really ended up in the expected state.
+# Molecule calls this playbook with `molecule verify`.
+- name: Verify
+  hosts: all
+  gather_facts: true
+  vars:
+    headscale_group: 'servers'
+  tasks:
+  - name: Check Headscale service is active
+    ansible.builtin.systemd:
+      name: headscale
+    register: headscale_svc
+    failed_when: headscale_svc.status.ActiveState != "active"
+
+  - name: Check if PAK code exists
+    ansible.builtin.file:
+      path: /root/headscale-{{ headscale_group }}-pak
+      state: file

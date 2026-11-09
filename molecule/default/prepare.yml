@@ -3,7 +3,60 @@
   hosts: all
   gather_facts: true
   tasks:
-  - name: Install python3-dnf (Fedora) # Pre-req for Fedora DNF Tasks
-    ansible.builtin.command: dnf -y install python3-dnf
-    changed_when: false
-    when: ansible_facts['distribution'] == "Fedora"
+    - name: Install python3-dnf (Fedora) # Pre-req for Fedora DNF Tasks
+      ansible.builtin.command: dnf -y install python3-dnf
+      when: ansible_facts['distribution'] == "Fedora"
+
+    - name: Install shadow-utils (AmazonLinux27)
+      ansible.builtin.package:
+        name:
+          - shadow-utils
+        state: latest
+      when:
+        - ansible_facts['distribution'] == "Amazon"
+        - ansible_facts['distribution_major_version'] == "2027"
+
+    - name: Install firewalld on RedHat
+      ansible.builtin.package:
+        name:
+          - firewalld
+        state: latest
+      when:
+        - ansible_facts['os_family'] in ["RedHat", "Suse"]
+
+    - name: Enable firewalld
+      ansible.builtin.service:
+        name: firewalld
+        enabled: yes
+      when:
+        - ansible_facts['os_family'] in ["RedHat", "Suse"]
+
+    - name: Start firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+      when:
+        - ansible_facts['os_family'] in ["RedHat", "Suse"]
+
+    - name: Install ufw on Debian
+      ansible.builtin.apt:
+        name:
+          - ufw
+        state: latest
+        update_cache: yes
+      when:
+        - ansible_facts['os_family'] in ["Debian"]
+
+    - name: Enable ufw
+      ansible.builtin.service:
+        name: ufw
+        enabled: yes
+      when:
+        - ansible_facts['os_family'] in ["Debian"]
+
+    - name: Start ufw
+      ansible.builtin.service:
+        name: ufw
+        state: started
+      when:
+        - ansible_facts['os_family'] in ["Debian"]

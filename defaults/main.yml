@@ -5,8 +5,5 @@
 headscale_version: '0.29.7' # See above URL for latest releases. e.g. "X.Y.Z"
 headscale_serv_arch: 'amd64' # Your system architecture, e.g. "amd64"
 headscale_group: 'servers'
-#  - 'servers'
-#  - 'workstations' 
-#  - 'example'
 pak_expiry: 60m # Expiry time for PAK. Default: 10m (1m/1h/1d/1y)
 recreate_pak: false # Change to true when you wish to recreate the PAK join code

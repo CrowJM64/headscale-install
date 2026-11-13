@@ -1,0 +1,69 @@
+{
+  // groups are collections of users having a common scope. A user can be in multiple groups
+  // groups cannot be composed of groups
+  "groups": {
+    "group:admin": ["admin1@"],
+    "group:user": ["user1@"]
+  },
+  // tagOwners in tailscale is an association between a TAG and the people allowed to set this TAG on a server.
+  // This is documented [here](https://tailscale.com/kb/1068/acl-tags#defining-a-tag)
+  // and explained [here](https://tailscale.com/blog/rbac-like-it-was-meant-to-be/)
+  "tagOwners": {
+    // the administrators can add servers in production
+    "tag:servers": ["group:admin"],
+    "tag:prod-databases": ["group:admin"],
+    "tag:prod-web-servers": ["group:admin"]
+
+  },
+  // hosts should be defined using its IP addresses and a subnet mask.
+  // to define a single host, use a /32 mask. You cannot use DNS entries here,
+  // as they're prone to be hijacked by replacing their IP addresses.
+  // see https://github.com/tailscale/tailscale/issues/3800 for more information.
+  "hosts": {
+    "postgresql.internal": "10.20.0.2/32",
+    "webservers.internal": "10.20.10.1/29"
+  },
+  "acls": [
+    // admin has access to all servers
+    {
+      "action": "accept",
+      "src": ["group:admin"],
+      "dst": [
+        "tag:servers:*",
+        "tag:prod-databases:*",
+        "tag:prod-web-servers:*"
+      ]
+    },
+
+    // users can access web servers on 80 and 443
+    {
+      "action": "accept",
+      "src": ["group:user"],
+      "proto": "tcp",
+      "dst": [
+        "tag:prod-web-servers:80,443"
+      ]
+    },
+
+    // we also allow admin to ping the servers
+    {
+      "action": "accept",
+      "src": ["group:admin"],
+      "proto": "icmp",
+      "dst": [
+        "tag:servers:*",
+        "tag:prod-databases:*",
+        "tag:prod-web-servers:*"
+      ]
+    },
+
+    // servers should be able to talk to database in tcp/5432. Database should not be able to initiate connections to
+    // applications servers
+    {
+      "action": "accept",
+      "src": ["tag:prod-web-servers"],
+      "proto": "tcp",
+      "dst": ["tag:prod-databases:*"]
+    }
+  ]
+}

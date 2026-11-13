@@ -1,8 +1,10 @@
 #SPDX-License-Identifier: MIT-0
 galaxy_info:
   author: Josh Murphy
-  description: Headscale+Tailscale Installation
-  company: ""
+  namespace: crowjm64
+  role_name: headscale_install
+  license: MIT
+  description: Headscale Installation
   min_ansible_version: 2.1
 
   galaxy_tags: 

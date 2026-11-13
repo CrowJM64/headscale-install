@@ -2,37 +2,41 @@
 **Author/Maintainer:** Josh Murphy
 
 ## Overview
-
 This Ansible role configures Head/TailScale by doing the below:
 ```yaml
-- Installs the desired version of Headscale to the designated Headscale Server.
-- Provisions using LetsEncrypt, assuming the machine is publicly accessible on 80+443/tcp
-- Creates the Headscape Group, and a PreAuthKey associated with that Group.
-- Installs Tailscale to the Clients connecting to the headscale server.
-- Joins the Tailscale Client to the Headscale Server using the above PAK.
+- Installs the desired version of Headscale to the designated Headscale Server, running rootless under a headscale user.
+- Provisions using LetsEncrypt, assuming the machine is publicly accessible on ports 443/tcp for Headscale serving and 80/tcp for LetsEncrypt communication.
+- Creates the Headscale Group, and a PreAuthKey associated with that Group.
 ```
 
-## Dependencies
-- TBC
+## Steps
+```yaml
+- Configure the below settings in the *headscale-config.yaml* template
+  - server_url
+  - acme_email
+  - tls_letsencrypt_hostname
+  - base_domain
+  - search_domains
+- Configure the below settings in the *acl.json* template
+  - Groups
+  - Access rules to tagged machines. 
+```
 
 ## Supported Platforms and Derivatives
-Headscale is . Below are the explicitly tested Distros.
+Below are the explicitly tested Distros.
 ```yaml
-## Headscale Server
-Debian
-Ubuntu
+## Redhat
+Rocky - 10, 9
+Fedora - 44, 43
+Oracle - 10, 9
+AmazonLinux - 2027, 2023
 
-# RedHat
-Rocky 10/9
-CentOS 10/9
-Fedora 43/42
-Oracle 10
+## Debian
+Debian - 13, 12
+Ubuntu - 2604, 2404
 
-  # Debian
-Ubuntu 24.04/22.04
-Debian 13
-Alma 10
-Mint 22
+## Suse
+OpenSuse Leap - 15
 ```
 
 ## Example Playbook
@@ -48,7 +52,7 @@ Mint 22
 ### From Ansible Galaxy
 
 ```bash
-ansible-galaxy install crowjm64.system_ssh_hardening
+ansible-galaxy install crowjm64.headscale-install
 ```
 
 This role was created and is maintained by **[CrowJM64](https://github.com/CrowJM64)**.

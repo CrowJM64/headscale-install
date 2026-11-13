@@ -2,13 +2,24 @@
 **Author/Maintainer:** Josh Murphy
 
 ## Overview
-
 This Ansible role configures Head/TailScale by doing the below:
 ```yaml
-- Installs the desired version of Headscale to the designated Headscale Server.
-- Provisions using LetsEncrypt, assuming the machine is publicly accessible on 80+443/tcp
+- Installs the desired version of Headscale to the designated Headscale Server, running rootless under a headscale user.
+- Provisions using LetsEncrypt, assuming the machine is publicly accessible on ports 443/tcp for Headscale serving and 80/tcp for LetsEncrypt communication.
 - Creates the Headscale Group, and a PreAuthKey associated with that Group.
-- Opens port 443/tcp for Headscale serving and 80/tcp for LetsEncrypt communication. 
+```
+
+## Steps
+```yaml
+- Configure the below settings in the *headscale-config.yaml* template
+  - server_url
+  - acme_email
+  - tls_letsencrypt_hostname
+  - base_domain
+  - search_domains
+- Configure the below settings in the *acl.json* template
+  - Groups
+  - Access rules to tagged machines. 
 ```
 
 ## Supported Platforms and Derivatives

@@ -1,9 +1,21 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # defaults file for headscale-install
+## Headscale Server setings 
 # Headscale Releases: https://github.com/juanfont/headscale/releases
 headscale_version: '0.29.7' # See above URL for latest releases. e.g. "X.Y.Z"
 headscale_serv_arch: 'amd64' # Your system architecture, e.g. "amd64"
+
+## PAK Settings
 headscale_group: 'servers'
 pak_expiry: 60m # Expiry time for PAK. Default: 10m (1m/1h/1d/1y)
 recreate_pak: false # Change to true when you wish to recreate the PAK join code
+
+## headscale-config.yaml Settings
+headscale_serv_url: 'headscale.example.com' # Publicly Accessible URL of the Headscale Server. Must be accessible on 80/tcp and 443/tcp for self-signing with LetsEncrypt. Variable also used for tls_letsencrypt_hostname, so do not include https://
+acme_email: 'user@example.com' # Email to register with ACME provider.
+tls_letsencrypt_hostname: "headscale.example.com"
+magic_dns: 'true' # Whether to use [MagicDNS](https://tailscale.com/docs/features/magicdns) (true/false)
+base_domain: 'hs.example.com' # This domain MUST be different from the HEADSCALE_SERV_URL/server_url domain. Local between Head/tailscale devices.
+search_domains: '[]'
+rndm_client_port: 'false' # Enabling this option makes devices prefer a random port for WireGuard traffic over the default static port 41641 (true/false)

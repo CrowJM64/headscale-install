@@ -146,16 +146,6 @@ ansible:
         - --pull-policy missing
         - --execution-environment-image ghcr.io/ansible/community-ansible-dev-tools:latest
 
-provisioner:
-  name: ansible
-  inventory:
-    hosts:
-      all:
-        headscale_version: '0.29.7'
-        headscale_serv_arch: 'amd64'
-        headscale_group: 'servers'
-
-
   playbooks:
     create: create.yml
     converge: converge.yml

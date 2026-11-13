@@ -34,9 +34,25 @@
     - name: Start firewalld
       ansible.builtin.service:
         name: firewalld
-        state: started
+        state: restarted
       when:
         - ansible_facts['os_family'] in ["RedHat", "Suse"]
+
+    - name: Install Pre-Req python3-firewall (RedHat)
+      ansible.builtin.package:
+        name:
+          - python3-firewall
+        state: latest
+      when:
+        - ansible_facts['os_family'] in ["RedHat"]
+
+    - name: Install Pre-Req python3-firewall (Suse)
+      ansible.builtin.package:
+        name:
+          - python311-firewall
+        state: latest
+      when:
+        - ansible_facts['os_family'] in ["Suse"]
 
     - name: Install ufw on Debian
       ansible.builtin.apt:

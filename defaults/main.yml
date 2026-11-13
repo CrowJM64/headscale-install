@@ -14,8 +14,8 @@ recreate_pak: false # Change to true when you wish to recreate the PAK join code
 ## headscale-config.yaml Settings
 headscale_serv_url: 'headscale.example.com' # Publicly Accessible URL of the Headscale Server. Must be accessible on 80/tcp and 443/tcp for self-signing with LetsEncrypt. Variable also used for tls_letsencrypt_hostname, so do not include https://
 acme_email: 'user@example.com' # Email to register with ACME provider.
-tls_letsencrypt_hostname: "headscale.example.com"
+tls_letsencrypt_hostname: "headscale.example.com" # The hostname that the server should be trying to certify using LetsEncrypt.
 magic_dns: 'true' # Whether to use [MagicDNS](https://tailscale.com/docs/features/magicdns) (true/false)
 base_domain: 'hs.example.com' # This domain MUST be different from the HEADSCALE_SERV_URL/server_url domain. Local between Head/tailscale devices.
-search_domains: '[]'
+search_domains: '[]' # Replace with your search domain, e.g. example.com. Remove the square brackets when setting this variable.
 rndm_client_port: 'false' # Enabling this option makes devices prefer a random port for WireGuard traffic over the default static port 41641 (true/false)
